@@ -1,0 +1,48 @@
+[package]
+name = "giffun"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gif = "0.11.3"
+
+[dependencies.windows]
+version = "0.28.0"
+features = [
+    "alloc",
+    "Foundation",
+    "Foundation_Metadata",
+    "Foundation_Numerics",
+    "Graphics",
+    "Graphics_DirectX",
+    "Graphics_DirectX_Direct3D11",
+    "Graphics_Imaging",
+    "Storage",
+    "Storage_Streams",
+    "System",
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_WinRT",
+    "Win32_System_WinRT_Graphics_Capture",
+    "Win32_System_WinRT_Direct3D11",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+[dependencies.robmikh-common]
+#git = "https://github.com/robmikh/robmikh-common-rs"
+#version = "0.1.1"
+path = "../robmikh-common-rs"
+features = [
+    "capture",
+    "capture-desktop",
+    "d3d",
+    "d3d-debug",
+    "dispatcher-queue-desktop",
+    "displays-desktop",
+]
