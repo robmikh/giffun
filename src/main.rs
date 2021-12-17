@@ -90,10 +90,14 @@ fn main() -> Result<()> {
             unsafe {
                 d3d_context.CopyResource(Some(staging_texture.cast()?), Some(frame_texture.cast()?));
             }
-            let mut bytes = get_bytes_from_texture(&d3d_context, &staging_texture)?;
+            let mut gif_frame = None;
+            ref_bytes_from_texture(&d3d_context, &staging_texture, |bytes, width, height, stride| -> Result<()> {
+                gif_frame = Some(gif::Frame::from_bgra_with_stride_speed(width as u16, height as u16, bytes, stride as usize, 10));
+                Ok(())
+            })?;
 
             // Build our gif frame
-            let mut gif_frame = gif::Frame::from_rgba_speed(capture_size.Width as u16, capture_size.Height as u16, &mut *bytes, 10);
+            let mut gif_frame = gif_frame.unwrap();
             let timestamp: Duration = if last_timestamp.is_none() {
                 let timestamp = frame.SystemRelativeTime()?;
                 timestamp
@@ -148,7 +152,7 @@ fn pump_messages<F: FnMut() -> Result<bool>, G: FnMut() -> Result<()>>(mut hot_k
     Ok(())
 }
 
-fn get_bytes_from_texture(d3d_context: &ID3D11DeviceContext, staging_texture: &ID3D11Texture2D) -> Result<Vec<u8>> {
+fn ref_bytes_from_texture<F: FnOnce(&[u8], u32, u32, u32) -> Result<()>>(d3d_context: &ID3D11DeviceContext, staging_texture: &ID3D11Texture2D, mut bytes_callback: F) -> Result<()> {
     let mut desc = D3D11_TEXTURE2D_DESC::default();
     unsafe { staging_texture.GetDesc(&mut desc as *mut _); }
 
@@ -163,17 +167,9 @@ fn get_bytes_from_texture(d3d_context: &ID3D11DeviceContext, staging_texture: &I
         )
     };
 
-    let bytes_per_pixel = 4;
-    let mut bits = vec![0u8; (desc.Width * desc.Height * bytes_per_pixel) as usize];
-    for row in 0..desc.Height {
-        let data_begin = (row * (desc.Width * bytes_per_pixel)) as usize;
-        let data_end = ((row + 1) * (desc.Width * bytes_per_pixel)) as usize;
-        let slice_begin = (row * mapped.RowPitch) as usize;
-        let slice_end = slice_begin + (desc.Width * bytes_per_pixel) as usize;
-        bits[data_begin..data_end].copy_from_slice(&slice[slice_begin..slice_end]);
-    }
-
+    let result = bytes_callback(slice, desc.Width, desc.Height, mapped.RowPitch);
     unsafe { d3d_context.Unmap(Some(resource), 0) };
+    result?;
 
-    Ok(bits)
+    Ok(())
 }

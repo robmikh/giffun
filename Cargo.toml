@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gif = "0.11.3"
+#gif = "0.11.3"
+gif = { git = "https://github.com/robmikh/image-gif" }
 
 [dependencies.windows]
 version = "0.28.0"
