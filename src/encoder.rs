@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     fs::File,
     path::Path,
     sync::{
@@ -9,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-use gif::Repeat;
+use gif::{Frame, Repeat};
 use robmikh_common::universal::d3d::{create_direct3d_device, get_d3d_interface_from_object};
 use windows::{
     core::{Handle, Result},
@@ -187,12 +188,8 @@ impl GifEncoder {
                             new_bytes
                         };
                         //println!("{} x {} ({}) vs {}", width, height, width * height, bytes.len());
-                        let mut gif_frame = gif::Frame::from_indexed_pixels(
-                            width as u16,
-                            height as u16,
-                            &bytes,
-                            None,
-                        );
+                        let mut gif_frame =
+                            create_gif_frame(width as u16, height as u16, &bytes, None);
                         gif_frame.left = rect.left as u16;
                         gif_frame.top = rect.top as u16;
                         let timestamp: Duration = if last_timestamp.is_none() {
@@ -268,5 +265,27 @@ impl GifEncoder {
             .unwrap();
         self.encoder_thread.join().unwrap()?;
         Ok(())
+    }
+}
+
+fn create_gif_frame<'a>(
+    width: u16,
+    height: u16,
+    pixels: &'a [u8],
+    transparent: Option<u8>,
+) -> Frame<'a> {
+    assert_eq!(
+        width as usize * height as usize,
+        pixels.len(),
+        "Too many or too little pixels for the given width and height to create a GIF Frame"
+    );
+
+    Frame {
+        width,
+        height,
+        buffer: Cow::Borrowed(pixels),
+        palette: None,
+        transparent,
+        ..Frame::default()
     }
 }

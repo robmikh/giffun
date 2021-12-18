@@ -17,7 +17,8 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 [[package]]
 name = "gif"
 version = "0.11.3"
-source = "git+https://github.com/robmikh/image-gif#5e14d8744baf06ab6ef064efcf8771898c25913d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3a7187e78088aead22ceedeee99779455b23fc231fe13ec443f99bb71694e5b"
 dependencies = [
  "color_quant",
  "weezl",
