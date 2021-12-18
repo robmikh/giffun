@@ -18,6 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
+    - uses: ilammy/msvc-dev-cmd@v1
       with:
         toolchain: ${{ matrix.rust }}
         profile: minimal
