@@ -1,8 +1,11 @@
-use std::sync::mpsc::{channel, Receiver};
+use std::{
+    sync::mpsc::{channel, Receiver, Sender},
+    time::Duration,
+};
 
 use windows::{
     core::{IInspectable, Result},
-    Foundation::TypedEventHandler,
+    Foundation::{TimeSpan, TypedEventHandler},
     Graphics::{
         Capture::{
             Direct3D11CaptureFrame, Direct3D11CaptureFramePool, GraphicsCaptureItem,
@@ -18,6 +21,7 @@ pub struct CaptureFrameGenerator {
     _item: GraphicsCaptureItem,
     frame_pool: Direct3D11CaptureFramePool,
     session: GraphicsCaptureSession,
+    sender: Sender<Option<Direct3D11CaptureFrame>>,
     receiver: Receiver<Option<Direct3D11CaptureFrame>>,
 }
 
@@ -42,12 +46,28 @@ impl CaptureFrameGenerator {
             TypedEventHandler::<Direct3D11CaptureFramePool, IInspectable>::new({
                 let session = session.clone();
                 let sender = sender.clone();
+                let mut last_timestamp: Option<TimeSpan> = None;
                 move |frame_pool, _| {
                     let frame_pool = frame_pool.as_ref().unwrap();
                     let frame = frame_pool.TryGetNextFrame()?;
-                    if sender.send(Some(frame)).is_err() {
-                        frame_pool.Close()?;
-                        session.Close()?;
+                    let timestamp = frame.SystemRelativeTime()?;
+                    let mut update = true;
+                    if let Some(last_timestamp) = &last_timestamp {
+                        let time_since_last_update = TimeSpan {
+                            Duration: timestamp.Duration - last_timestamp.Duration,
+                        };
+                        let duration: Duration = time_since_last_update.into();
+                        if duration.as_millis() < 33 {
+                            update = false;
+                        }
+                    }
+
+                    if update {
+                        last_timestamp = Some(timestamp);
+                        if sender.send(Some(frame)).is_err() {
+                            frame_pool.Close()?;
+                            session.Close()?;
+                        }
                     }
                     Ok(())
                 }
@@ -59,12 +79,16 @@ impl CaptureFrameGenerator {
             _item: item,
             frame_pool,
             session,
+            sender,
             receiver,
         })
     }
 
-    pub fn session(&self) -> &GraphicsCaptureSession {
-        &self.session
+    pub fn session(&self) -> CaptureFrameGeneratorSession {
+        CaptureFrameGeneratorSession {
+            session: self.session.clone(),
+            sender: self.sender.clone(),
+        }
     }
 
     pub fn wait_for_next_frame(&mut self) -> Result<Option<Direct3D11CaptureFrame>> {
@@ -91,7 +115,25 @@ impl CaptureFrameGenerator {
 
 impl Drop for CaptureFrameGenerator {
     fn drop(&mut self) {
+        let _ = self.sender.send(None);
         self.session.Close().unwrap();
         self.frame_pool.Close().unwrap();
+    }
+}
+
+pub struct CaptureFrameGeneratorSession {
+    session: GraphicsCaptureSession,
+    sender: Sender<Option<Direct3D11CaptureFrame>>,
+}
+
+impl CaptureFrameGeneratorSession {
+    pub fn start(&self) -> Result<()> {
+        self.session.StartCapture()
+    }
+
+    pub fn stop(self) -> Result<()> {
+        self.session.Close()?;
+        let _ = self.sender.send(None);
+        Ok(())
     }
 }

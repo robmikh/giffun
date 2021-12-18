@@ -121,7 +121,7 @@ fn main() -> Result<()> {
 
     // Setup capture
     let mut frame_generator = CaptureFrameGenerator::new(device, capture_item, capture_size, 2)?;
-    let capture_session = frame_generator.session().clone();
+    let capture_session = frame_generator.session();
 
     // Setup encoder thread
     let start_event = unsafe {
@@ -208,7 +208,7 @@ fn main() -> Result<()> {
         Ok(if !is_recording {
             is_recording = true;
             println!("Starting recording...");
-            capture_session.StartCapture()?;
+            capture_session.start()?;
             unsafe {
                 SetEvent(&start_event.0);
             }
@@ -218,7 +218,7 @@ fn main() -> Result<()> {
         })
     })?;
     println!("Stopping recording...");
-    capture_session.Close()?;
+    capture_session.stop()?;
     should_exit
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .unwrap();
