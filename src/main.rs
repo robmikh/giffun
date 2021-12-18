@@ -170,7 +170,21 @@ fn main() -> Result<()> {
                 };
 
                 // If there's no change, don't bother
-                if let Some(rect) = rect {
+                if let Some(mut rect) = rect {
+                    // Inflate our rect to eliminate artifacts
+                    let inflate_amount = 1;
+                    let left = rect.left as i32 - inflate_amount;
+                    let top = rect.top as i32 - inflate_amount;
+                    let right = rect.right as i32 + inflate_amount;
+                    let bottom = rect.bottom as i32 + inflate_amount;
+                    //println!("{:?}", rect);
+                    rect.left = left.max(0) as u32;
+                    rect.top = top.max(0) as u32;
+                    rect.right = right.min(capture_size.Width) as u32;
+                    rect.bottom = bottom.min(capture_size.Height) as u32;
+                    //println!("{:?}", rect);
+                    //println!("");
+
                     // Build our gif frame
                     let width = rect.width();
                     let height = rect.height();
