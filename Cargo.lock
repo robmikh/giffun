@@ -11,7 +11,7 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 [[package]]
 name = "gif"
 version = "0.11.3"
-source = "git+https://github.com/robmikh/image-gif#eca4777d7f66cf8b0893f603f597b2aafe7c02cd"
+source = "git+https://github.com/robmikh/image-gif#5e14d8744baf06ab6ef064efcf8771898c25913d"
 dependencies = [
  "color_quant",
  "weezl",
