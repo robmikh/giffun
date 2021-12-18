@@ -66,6 +66,11 @@ fn main() -> Result<()> {
     let display_handle = get_display_handle_from_index(0).expect("No monitors detected!");
     let capture_item = create_capture_item_for_monitor(display_handle)?;
 
+    // Check to see if we're using the debug layer
+    if cfg!(feature = "debug") {
+        println!("Using the D3D11 debug layer...");
+    }
+
     // Init d3d11
     let d3d_device = create_d3d_device()?;
     let d3d_context = unsafe {

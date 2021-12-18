@@ -46,7 +46,14 @@ features = [
     "capture",
     "capture-desktop",
     "d3d",
-    "d3d-debug",
     "dispatcher-queue-desktop",
     "displays-desktop",
+]
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[features]
+debug = [
+    "robmikh-common/d3d-debug",
 ]
