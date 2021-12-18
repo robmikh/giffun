@@ -1,10 +1,11 @@
 use windows::{
     core::{Interface, Result},
     Win32::Graphics::Direct3D11::{
-        ID3D11DeviceContext, ID3D11Multithread, ID3D11Resource, ID3D11Texture2D, D3D11_MAP_READ,
-        D3D11_TEXTURE2D_DESC,
+        ID3D11Buffer, ID3D11DeviceContext, ID3D11Multithread, ID3D11Resource, ID3D11Texture2D,
+        D3D11_BUFFER_DESC, D3D11_MAP_READ, D3D11_TEXTURE2D_DESC,
     },
 };
+use zerocopy::FromBytes;
 
 pub struct Direct3D11MultiThread {
     multithread: ID3D11Multithread,
@@ -74,4 +75,29 @@ pub fn get_bytes_from_texture(
     unsafe { d3d_context.Unmap(Some(resource), 0) };
 
     Ok(bytes)
+}
+
+pub fn read_from_buffer<T: FromBytes>(
+    d3d_context: &ID3D11DeviceContext,
+    staging_buffer: &ID3D11Buffer,
+) -> Result<T> {
+    let mut desc = D3D11_BUFFER_DESC::default();
+    unsafe {
+        staging_buffer.GetDesc(&mut desc as *mut _);
+    }
+
+    assert!(std::mem::size_of::<T>() <= desc.ByteWidth as usize);
+
+    let resource: ID3D11Resource = staging_buffer.cast()?;
+    let mapped = unsafe { d3d_context.Map(Some(resource.clone()), 0, D3D11_MAP_READ, 0)? };
+
+    // Get a slice of bytes
+    let slice: &[u8] =
+        unsafe { std::slice::from_raw_parts(mapped.pData as *const _, std::mem::size_of::<T>()) };
+
+    let result = T::read_from(slice).unwrap();
+
+    unsafe { d3d_context.Unmap(Some(resource), 0) };
+
+    Ok(result)
 }

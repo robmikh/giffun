@@ -1,5 +1,6 @@
 mod capture;
 mod d3d;
+mod diff;
 mod handle;
 mod hotkey;
 mod lut;
@@ -49,8 +50,8 @@ use windows::{
 };
 
 use crate::{
-    capture::CaptureFrameGenerator, handle::AutoCloseHandle, hotkey::HotKey, lut::PaletteIndexLUT,
-    palette::DEFAULT_PALETTE, quantizer::ColorQuantizer,
+    capture::CaptureFrameGenerator, diff::TextureDiffer, handle::AutoCloseHandle, hotkey::HotKey,
+    lut::PaletteIndexLUT, palette::DEFAULT_PALETTE, quantizer::ColorQuantizer,
 };
 
 const INFINITE: u32 = 0xFFFFFFFF;
@@ -124,6 +125,9 @@ fn main() -> Result<()> {
     // Create our color quantizer
     let quantizer = ColorQuantizer::new(&d3d_device, &d3d_context, lut, capture_size)?;
 
+    // Create our differ
+    let mut differ = TextureDiffer::new(&d3d_device, &d3d_context, capture_size)?;
+
     // Setup capture
     let mut frame_generator = CaptureFrameGenerator::new(device, capture_item, capture_size, 2)?;
     let capture_session = frame_generator.session();
@@ -154,38 +158,64 @@ fn main() -> Result<()> {
 
             let mut last_timestamp = None;
             let mut process_frame = |frame: Direct3D11CaptureFrame| -> Result<()> {
-                let bytes = {
+                let (bytes, rect) = {
                     let frame_texture: ID3D11Texture2D =
                         get_d3d_interface_from_object(&frame.Surface()?)?;
-                    quantizer.quantize(&frame_texture)?
+                    let bytes = quantizer.quantize(&frame_texture)?;
+
+                    let rect = differ.process_frame(&frame_texture)?;
+                    //println!("{:?}", rect);
+
+                    (bytes, rect)
                 };
 
-                // Build our gif frame
-                let mut gif_frame = gif::Frame::from_indexed_pixels(
-                    capture_size.Width as u16,
-                    capture_size.Height as u16,
-                    &bytes,
-                    None,
-                );
-                let timestamp: Duration = if last_timestamp.is_none() {
-                    let timestamp = frame.SystemRelativeTime()?;
-                    timestamp
-                } else {
-                    last_timestamp.unwrap()
-                }
-                .into();
-                let current_timestamp: Duration = {
-                    let current_timestamp = frame.SystemRelativeTime()?;
-                    last_timestamp = Some(current_timestamp);
-                    current_timestamp
-                }
-                .into();
-                let frame_delay = current_timestamp - timestamp;
-                //println!("delay: {}", frame_delay.as_millis());
-                gif_frame.delay = (frame_delay.as_millis() / 10) as u16;
+                // If there's no change, don't bother
+                if let Some(rect) = rect {
+                    // Build our gif frame
+                    let width = rect.width();
+                    let height = rect.height();
+                    let bytes = if width == capture_size.Width as u32
+                        && height == capture_size.Height as u32
+                    {
+                        bytes
+                    } else {
+                        let mut new_bytes = vec![0u8; (width * height) as usize];
+                        for j in 0..height {
+                            let dest_start = (j * width) as usize;
+                            let dest_end = dest_start + width as usize;
+                            let src_start =
+                                (((j + rect.top) * capture_size.Width as u32) + rect.left) as usize;
+                            let src_end = src_start + width as usize;
+                            new_bytes[dest_start..dest_end]
+                                .copy_from_slice(&bytes[src_start..src_end]);
+                        }
+                        new_bytes
+                    };
+                    //println!("{} x {} ({}) vs {}", width, height, width * height, bytes.len());
+                    let mut gif_frame =
+                        gif::Frame::from_indexed_pixels(width as u16, height as u16, &bytes, None);
+                    gif_frame.left = rect.left as u16;
+                    gif_frame.top = rect.top as u16;
+                    let timestamp: Duration = if last_timestamp.is_none() {
+                        let timestamp = frame.SystemRelativeTime()?;
+                        timestamp
+                    } else {
+                        last_timestamp.unwrap()
+                    }
+                    .into();
+                    let current_timestamp: Duration = {
+                        let current_timestamp = frame.SystemRelativeTime()?;
+                        last_timestamp = Some(current_timestamp);
+                        current_timestamp
+                    }
+                    .into();
+                    let frame_delay = current_timestamp - timestamp;
+                    //println!("delay: {}", frame_delay.as_millis());
+                    gif_frame.delay = (frame_delay.as_millis() / 10) as u16;
 
-                // Write our frame to disk
-                encoder.write_frame(&gif_frame).unwrap();
+                    // Write our frame to disk
+                    encoder.write_frame(&gif_frame).unwrap();
+                }
 
                 Ok(())
             };

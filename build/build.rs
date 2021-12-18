@@ -4,6 +4,7 @@ fn main() {
     compile_shader("cs_5_0", "LUTGeneration");
     compile_shader("ps_5_0", "LUTLookup_PS");
     compile_shader("vs_5_0", "LUTLookup_VS");
+    compile_shader("cs_5_0", "TextureDiff");
 }
 
 fn compile_shader(profile: &str, file_stem: &str) {
