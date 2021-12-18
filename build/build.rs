@@ -8,7 +8,7 @@ fn main() {
 }
 
 fn compile_shader(profile: &str, file_stem: &str) {
-    //println!("cargo:rerun-if-changed=data/shaders/{}.hlsl", file_stem);
+    println!("cargo:rerun-if-changed=data/shaders/{}.hlsl", file_stem);
     let pdb_out_dir = {
         //let mut pdb_out_dir = std::env::var("OUT_DIR").unwrap();
         //let last_char = pdb_out_dir.chars().last().unwrap();
