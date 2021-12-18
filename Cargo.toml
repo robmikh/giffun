@@ -40,9 +40,8 @@ features = [
 ]
 
 [dependencies.robmikh-common]
-#git = "https://github.com/robmikh/robmikh-common-rs"
-#version = "0.1.1"
-path = "../robmikh-common-rs"
+git = "https://github.com/robmikh/robmikh-common-rs"
+#path = "../robmikh-common-rs"
 features = [
     "capture",
     "capture-desktop",
