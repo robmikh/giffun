@@ -1,18 +1,20 @@
 mod capture;
+mod cli;
 mod encoder;
 mod util;
 
+use std::path::Path;
+
+use cli::{parse_cli, CaptureType};
 use robmikh_common::{
     desktop::{
-        capture::create_capture_item_for_monitor,
+        capture::{create_capture_item_for_monitor, create_capture_item_for_window},
         dispatcher_queue::DispatcherQueueControllerExtensions,
-        displays::get_display_handle_from_index,
     },
     universal::d3d::create_d3d_device,
 };
 use windows::{
     core::Result,
-    Graphics::SizeInt32,
     System::{DispatcherQueueController, VirtualKey},
     Win32::{
         System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
@@ -25,16 +27,18 @@ use crate::{
     util::hotkey::pump_messages,
 };
 
-fn main() -> Result<()> {
+fn run<P: AsRef<Path>>(capture_type: CaptureType, output_file_path: P) -> Result<()> {
     unsafe {
         RoInitialize(RO_INIT_MULTITHREADED)?;
     }
     let _controller =
         DispatcherQueueController::create_dispatcher_queue_controller_for_current_thread()?;
 
-    // Get the primary monitor
-    let display_handle = get_display_handle_from_index(0).expect("No monitors detected!");
-    let capture_item = create_capture_item_for_monitor(display_handle)?;
+    // Get the capture item
+    let capture_item = match capture_type {
+        CaptureType::Window(window) => create_capture_item_for_window(window)?,
+        CaptureType::Monitor(monitor) => create_capture_item_for_monitor(monitor)?,
+    };
 
     // Check to see if we're using the debug layer
     if cfg!(feature = "debug") {
@@ -44,11 +48,8 @@ fn main() -> Result<()> {
     // Init d3d11
     let d3d_device = create_d3d_device()?;
 
-    // We're only going to capture part of the screen
-    let capture_size = SizeInt32 {
-        Width: 1000,
-        Height: 1000,
-    };
+    // Match the size of the capture item
+    let capture_size = capture_item.Size()?;
 
     // Create our palette
     let palette = &DEFAULT_PALETTE;
@@ -59,7 +60,7 @@ fn main() -> Result<()> {
         palette,
         capture_item,
         capture_size,
-        "recording.gif",
+        output_file_path,
     )?;
 
     // Record
@@ -82,5 +83,11 @@ fn main() -> Result<()> {
     println!("Stopping recording...");
     encoder.stop()?;
 
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    let cli_options = parse_cli()?;
+    run(cli_options.capture_type, &cli_options.output_file)?;
     Ok(())
 }
