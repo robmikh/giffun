@@ -118,4 +118,11 @@ impl FrameCompositor {
             system_relative_time,
         })
     }
+
+    pub fn repeat_frame<'a>(&'a self, system_relative_time: TimeSpan) -> ComposedFrame<'a> {
+        ComposedFrame {
+            texture: &self.output_texture,
+            system_relative_time,
+        }
+    }
 }

@@ -214,7 +214,7 @@ impl TextureDiffer {
 
 impl DiffRect {
     pub fn is_valid(&self) -> bool {
-        self.right > self.left && self.bottom > self.top
+        self.right >= self.left && self.bottom >= self.top
     }
     pub fn width(&self) -> u32 {
         self.right - self.left

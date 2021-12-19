@@ -14,6 +14,7 @@ use gif::{Frame, Repeat};
 use robmikh_common::universal::d3d::create_direct3d_device;
 use windows::{
     core::{Handle, Result},
+    Foundation::TimeSpan,
     Graphics::{Capture::GraphicsCaptureItem, SizeInt32},
     Win32::{
         Foundation::PWSTR,
@@ -30,7 +31,7 @@ use windows::{
 
 use crate::{
     capture::frame_generator::{CaptureFrameGenerator, CaptureFrameGeneratorSession},
-    encoder::compositor::ComposedFrame,
+    encoder::{compositor::ComposedFrame, diff::DiffRect},
     util::handle::AutoCloseHandle,
 };
 
@@ -142,8 +143,8 @@ impl CaptureGifEncoder {
                 encoder.set_repeat(Repeat::Infinite).unwrap();
 
                 let mut last_timestamp = None;
-                let mut process_frame = |frame: ComposedFrame| -> Result<()> {
-                    let (bytes, rect) = {
+                let mut process_frame = |frame: ComposedFrame, force: bool| -> Result<()> {
+                    let (bytes, mut rect) = {
                         let bytes = quantizer.quantize(frame.texture)?;
 
                         let rect = differ.process_frame(frame.texture)?;
@@ -151,6 +152,17 @@ impl CaptureGifEncoder {
 
                         (bytes, rect)
                     };
+
+                    if force && rect.is_none() {
+                        // Since there's no change, pick a small random part of the frame.
+                        let new_rect = DiffRect {
+                            left: 0,
+                            top: 0,
+                            right: 5,
+                            bottom: 5,
+                        };
+                        rect = Some(new_rect);
+                    }
 
                     // If there's no change, don't bother
                     if let Some(mut rect) = rect {
@@ -218,21 +230,28 @@ impl CaptureGifEncoder {
                     Ok(())
                 };
 
+                let mut last_timestamp = TimeSpan::default();
                 loop {
                     if should_exit.load(Ordering::SeqCst) == true {
                         while let Some(frame) = frame_generator.try_get_next_frame()? {
                             let composed_frame = frame_compositor.process_frame(&frame)?;
-                            process_frame(composed_frame)?;
+                            last_timestamp = composed_frame.system_relative_time;
+                            process_frame(composed_frame, false)?;
                         }
                         break;
                     }
                     if let Some(frame) = frame_generator.wait_for_next_frame()? {
                         let composed_frame = frame_compositor.process_frame(&frame)?;
-                        process_frame(composed_frame)?;
+                        last_timestamp = composed_frame.system_relative_time;
+                        process_frame(composed_frame, false)?;
                     } else {
                         break;
                     }
                 }
+
+                let last_frame = frame_compositor.repeat_frame(last_timestamp);
+                process_frame(last_frame, true)?;
+
                 Ok(())
             }
         });
