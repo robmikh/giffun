@@ -144,14 +144,7 @@ impl CaptureGifEncoder {
 
                 let mut last_timestamp = None;
                 let mut process_frame = |frame: ComposedFrame, force: bool| -> Result<()> {
-                    let (bytes, mut rect) = {
-                        let bytes = quantizer.quantize(frame.texture)?;
-
-                        let rect = differ.process_frame(frame.texture)?;
-                        //println!("{:?}", rect);
-
-                        (bytes, rect)
-                    };
+                    let mut rect = differ.process_frame(frame.texture)?;
 
                     if force && rect.is_none() {
                         // Since there's no change, pick a small random part of the frame.
@@ -180,28 +173,11 @@ impl CaptureGifEncoder {
                         //println!("{:?}", rect);
                         //println!("");
 
+                        let bytes = quantizer.quantize(frame.texture, &rect)?;
+
                         // Build our gif frame
                         let width = rect.width();
                         let height = rect.height();
-                        let bytes = if width == capture_size.Width as u32
-                            && height == capture_size.Height as u32
-                        {
-                            bytes
-                        } else {
-                            let mut new_bytes = vec![0u8; (width * height) as usize];
-                            for j in 0..height {
-                                let dest_start = (j * width) as usize;
-                                let dest_end = dest_start + width as usize;
-                                let src_start = (((j + rect.top) * capture_size.Width as u32)
-                                    + rect.left)
-                                    as usize;
-                                let src_end = src_start + width as usize;
-                                new_bytes[dest_start..dest_end]
-                                    .copy_from_slice(&bytes[src_start..src_end]);
-                            }
-                            new_bytes
-                        };
-                        //println!("{} x {} ({}) vs {}", width, height, width * height, bytes.len());
                         let mut gif_frame =
                             create_gif_frame(width as u16, height as u16, &bytes, None);
                         gif_frame.left = rect.left as u16;

@@ -1,7 +1,7 @@
 use windows::{
     core::{Interface, Result},
     Foundation::Numerics::{Vector2, Vector3},
-    Graphics::SizeInt32,
+    Graphics::{RectInt32, SizeInt32},
     Win32::{
         Foundation::PSTR,
         Graphics::{
@@ -10,7 +10,7 @@ use windows::{
                 ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
                 ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11Texture2D,
                 D3D11_BIND_INDEX_BUFFER, D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE,
-                D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC, D3D11_COMPARISON_NEVER,
+                D3D11_BIND_VERTEX_BUFFER, D3D11_BOX, D3D11_BUFFER_DESC, D3D11_COMPARISON_NEVER,
                 D3D11_CPU_ACCESS_READ, D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_INPUT_ELEMENT_DESC,
                 D3D11_INPUT_PER_VERTEX_DATA, D3D11_SAMPLER_DESC, D3D11_SUBRESOURCE_DATA,
                 D3D11_TEXTURE2D_DESC, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_USAGE_DEFAULT,
@@ -26,7 +26,7 @@ use windows::{
 
 use crate::util::d3d::{get_bytes_from_texture, Direct3D11MultiThread};
 
-use super::lut::PaletteIndexLUT;
+use super::{diff::DiffRect, lut::PaletteIndexLUT};
 
 pub struct ColorQuantizer {
     input_texture: ID3D11Texture2D,
@@ -263,7 +263,7 @@ impl ColorQuantizer {
         })
     }
 
-    pub fn quantize(&self, frame_texture: &ID3D11Texture2D) -> Result<Vec<u8>> {
+    pub fn quantize(&self, frame_texture: &ID3D11Texture2D, rect: &DiffRect) -> Result<Vec<u8>> {
         let bytes = {
             let _lock = self.multithread.lock();
 
@@ -280,12 +280,37 @@ impl ColorQuantizer {
 
             // Copy the output texture to our staging texture and then copy the bits.
             unsafe {
-                self.d3d_context.CopyResource(
-                    Some(self.staging_texture.cast()?),
-                    Some(self.output_texture.cast()?),
+                let region = D3D11_BOX {
+                    left: rect.left,
+                    right: rect.right,
+                    top: rect.top,
+                    bottom: rect.bottom,
+                    back: 1,
+                    front: 0,
+                };
+                self.d3d_context.CopySubresourceRegion(
+                    &self.staging_texture,
+                    0,
+                    rect.left,
+                    rect.top,
+                    0,
+                    &self.output_texture,
+                    0,
+                    &region,
                 );
             }
-            let bytes = get_bytes_from_texture(&self.d3d_context, &self.staging_texture, 1)?;
+
+            let bytes = get_bytes_from_texture(
+                &self.d3d_context,
+                &self.staging_texture,
+                1,
+                RectInt32 {
+                    X: rect.left as i32,
+                    Y: rect.top as i32,
+                    Width: rect.width() as i32,
+                    Height: rect.height() as i32,
+                },
+            )?;
             bytes
         };
         Ok(bytes)

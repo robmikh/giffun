@@ -1,5 +1,6 @@
 use windows::{
     core::{Interface, Result},
+    Graphics::RectInt32,
     Win32::Graphics::Direct3D11::{
         ID3D11Buffer, ID3D11DeviceContext, ID3D11Multithread, ID3D11Resource, ID3D11Texture2D,
         D3D11_BUFFER_DESC, D3D11_MAP_READ, D3D11_TEXTURE2D_DESC,
@@ -46,6 +47,7 @@ pub fn get_bytes_from_texture(
     d3d_context: &ID3D11DeviceContext,
     staging_texture: &ID3D11Texture2D,
     bytes_per_pixel: u32,
+    rect: RectInt32,
 ) -> Result<Vec<u8>> {
     let mut desc = D3D11_TEXTURE2D_DESC::default();
     unsafe {
@@ -63,12 +65,13 @@ pub fn get_bytes_from_texture(
         )
     };
 
-    let mut bytes = vec![0u8; (desc.Width * desc.Height * bytes_per_pixel) as usize];
-    for row in 0..desc.Height {
-        let data_begin = (row * (desc.Width * bytes_per_pixel)) as usize;
-        let data_end = ((row + 1) * (desc.Width * bytes_per_pixel)) as usize;
-        let slice_begin = (row * mapped.RowPitch) as usize;
-        let slice_end = slice_begin + (desc.Width * bytes_per_pixel) as usize;
+    let mut bytes = vec![0u8; (rect.Width * rect.Height * bytes_per_pixel as i32) as usize];
+    for row in 0..rect.Height {
+        let data_begin = (row * (rect.Width * bytes_per_pixel as i32)) as usize;
+        let data_end = data_begin + (rect.Width * bytes_per_pixel as i32) as usize;
+        let slice_begin = (((row + rect.Y) * mapped.RowPitch as i32)
+            + (rect.X * bytes_per_pixel as i32)) as usize;
+        let slice_end = slice_begin + (rect.Width * bytes_per_pixel as i32) as usize;
         bytes[data_begin..data_end].copy_from_slice(&slice[slice_begin..slice_end]);
     }
 
