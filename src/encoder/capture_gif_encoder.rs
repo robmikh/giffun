@@ -33,14 +33,13 @@ use windows::{
 };
 
 use crate::{
-    capture::{CaptureFrameGenerator, CaptureFrameGeneratorSession},
-    diff::TextureDiffer,
-    handle::AutoCloseHandle,
-    lut::PaletteIndexLUT,
-    quantizer::ColorQuantizer,
+    capture::frame_generator::{CaptureFrameGenerator, CaptureFrameGeneratorSession},
+    util::handle::AutoCloseHandle,
 };
 
-pub struct GifEncoder {
+use super::{diff::TextureDiffer, lut::PaletteIndexLUT, quantizer::ColorQuantizer};
+
+pub struct CaptureGifEncoder {
     _d3d_device: ID3D11Device,
     _d3d_context: ID3D11DeviceContext,
     _palette_texture: ID3D11Texture1D,
@@ -53,7 +52,7 @@ pub struct GifEncoder {
 
 const INFINITE: u32 = 0xFFFFFFFF;
 
-impl GifEncoder {
+impl CaptureGifEncoder {
     pub fn new<P: AsRef<Path>>(
         d3d_device: &ID3D11Device,
         palette: &[u8],
@@ -61,6 +60,8 @@ impl GifEncoder {
         capture_size: SizeInt32,
         path: P,
     ) -> Result<Self> {
+        let capture_size = ensure_even_size(capture_size);
+
         let d3d_context = unsafe {
             let mut d3d_context = None;
             d3d_device.GetImmediateContext(&mut d3d_context);
@@ -287,5 +288,20 @@ fn create_gif_frame<'a>(
         palette: None,
         transparent,
         ..Frame::default()
+    }
+}
+
+fn ensure_even(value: i32) -> i32 {
+    if value % 2 == 0 {
+        value
+    } else {
+        value + 1
+    }
+}
+
+fn ensure_even_size(size: SizeInt32) -> SizeInt32 {
+    SizeInt32 {
+        Width: ensure_even(size.Width),
+        Height: ensure_even(size.Height),
     }
 }

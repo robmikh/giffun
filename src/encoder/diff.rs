@@ -15,7 +15,7 @@ use windows::{
 };
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::d3d::{read_from_buffer, Direct3D11MultiThread};
+use crate::util::d3d::{read_from_buffer, Direct3D11MultiThread};
 
 pub struct TextureDiffer {
     d3d_device: ID3D11Device,
@@ -130,7 +130,7 @@ impl TextureDiffer {
                 d3d_device.CreateUnorderedAccessView(&diff_buffer, &desc)?
             };
 
-            let diff_shader_bytes = include_bytes!["../data/generated/shaders/TextureDiff.cso"];
+            let diff_shader_bytes = include_bytes!["../../data/generated/shaders/TextureDiff.cso"];
             let diff_shader = d3d_device.CreateComputeShader(
                 diff_shader_bytes as *const _ as *const _,
                 diff_shader_bytes.len(),

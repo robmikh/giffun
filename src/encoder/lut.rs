@@ -42,7 +42,7 @@ impl PaletteIndexLUT {
             let lut_uav = { d3d_device.CreateUnorderedAccessView(&lut_texture, std::ptr::null())? };
 
             let lut_generation_shader_bytes =
-                include_bytes!["../data/generated/shaders/LUTGeneration.cso"];
+                include_bytes!["../../data/generated/shaders/LUTGeneration.cso"];
             let lut_generation_shader = d3d_device.CreateComputeShader(
                 lut_generation_shader_bytes as *const _ as *const _,
                 lut_generation_shader_bytes.len(),

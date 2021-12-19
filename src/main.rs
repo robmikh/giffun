@@ -1,12 +1,6 @@
 mod capture;
-mod d3d;
-mod diff;
 mod encoder;
-mod handle;
-mod hotkey;
-mod lut;
-mod palette;
-mod quantizer;
+mod util;
 
 use robmikh_common::{
     desktop::{
@@ -21,16 +15,15 @@ use windows::{
     Graphics::SizeInt32,
     System::{DispatcherQueueController, VirtualKey},
     Win32::{
-        Foundation::HWND,
         System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
-        UI::{
-            Input::KeyboardAndMouse::{MOD_CONTROL, MOD_SHIFT},
-            WindowsAndMessaging::{DispatchMessageW, GetMessageW, MSG, WM_HOTKEY},
-        },
+        UI::Input::KeyboardAndMouse::{MOD_CONTROL, MOD_SHIFT},
     },
 };
 
-use crate::{encoder::GifEncoder, hotkey::HotKey, palette::DEFAULT_PALETTE};
+use crate::{
+    encoder::{capture_gif_encoder::CaptureGifEncoder, palette::DEFAULT_PALETTE},
+    util::hotkey::pump_messages,
+};
 
 fn main() -> Result<()> {
     unsafe {
@@ -61,7 +54,7 @@ fn main() -> Result<()> {
     let palette = &DEFAULT_PALETTE;
 
     // Create our encoder
-    let mut encoder = GifEncoder::new(
+    let mut encoder = CaptureGifEncoder::new(
         &d3d_device,
         palette,
         capture_item,
@@ -71,35 +64,23 @@ fn main() -> Result<()> {
 
     // Record
     let mut is_recording = false;
-    pump_messages(|| -> Result<bool> {
-        Ok(if !is_recording {
-            is_recording = true;
-            println!("Starting recording...");
-            encoder.start()?;
-            false
-        } else {
-            true
-        })
-    })?;
+    println!("Press SHIFT+CTRL+R to start/stop the recording...");
+    pump_messages(
+        MOD_SHIFT | MOD_CONTROL,
+        VirtualKey::R.0 as u32,
+        || -> Result<bool> {
+            Ok(if !is_recording {
+                is_recording = true;
+                println!("Starting recording...");
+                encoder.start()?;
+                false
+            } else {
+                true
+            })
+        },
+    )?;
     println!("Stopping recording...");
     encoder.stop()?;
 
-    Ok(())
-}
-
-fn pump_messages<F: FnMut() -> Result<bool>>(mut hot_key_callback: F) -> Result<()> {
-    let _hot_key = HotKey::new(MOD_SHIFT | MOD_CONTROL, VirtualKey::R.0 as u32)?;
-    println!("Press SHIFT+CTRL+R to start/stop the recording...");
-    unsafe {
-        let mut message = MSG::default();
-        while GetMessageW(&mut message, HWND(0), 0, 0).into() {
-            if message.message == WM_HOTKEY {
-                if hot_key_callback()? {
-                    break;
-                }
-            }
-            DispatchMessageW(&mut message);
-        }
-    }
     Ok(())
 }
