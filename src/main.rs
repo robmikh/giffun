@@ -15,6 +15,7 @@ use robmikh_common::{
 };
 use windows::{
     core::Result,
+    Graphics::SizeInt32,
     System::{DispatcherQueueController, VirtualKey},
     Win32::{
         System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
@@ -24,7 +25,7 @@ use windows::{
 
 use crate::{
     encoder::{capture_gif_encoder::CaptureGifEncoder, palette::DEFAULT_PALETTE},
-    util::hotkey::pump_messages,
+    util::{dwm::get_window_rect, hotkey::pump_messages},
 };
 
 fn run<P: AsRef<Path>>(capture_type: CaptureType, output_file_path: P) -> Result<()> {
@@ -35,9 +36,21 @@ fn run<P: AsRef<Path>>(capture_type: CaptureType, output_file_path: P) -> Result
         DispatcherQueueController::create_dispatcher_queue_controller_for_current_thread()?;
 
     // Get the capture item
-    let capture_item = match capture_type {
-        CaptureType::Window(window) => create_capture_item_for_window(window)?,
-        CaptureType::Monitor(monitor) => create_capture_item_for_monitor(monitor)?,
+    let (capture_item, capture_size) = match capture_type {
+        CaptureType::Window(window) => {
+            let item = create_capture_item_for_window(window)?;
+            let window_rect = get_window_rect(window)?;
+            let size = SizeInt32 {
+                Width: window_rect.Width,
+                Height: window_rect.Height,
+            };
+            (item, size)
+        }
+        CaptureType::Monitor(monitor) => {
+            let item = create_capture_item_for_monitor(monitor)?;
+            let size = item.Size()?;
+            (item, size)
+        }
     };
 
     // Check to see if we're using the debug layer
@@ -47,9 +60,6 @@ fn run<P: AsRef<Path>>(capture_type: CaptureType, output_file_path: P) -> Result
 
     // Init d3d11
     let d3d_device = create_d3d_device()?;
-
-    // Match the size of the capture item
-    let capture_size = capture_item.Size()?;
 
     // Create our palette
     let palette = &DEFAULT_PALETTE;
