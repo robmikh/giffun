@@ -11,20 +11,16 @@ use std::{
 };
 
 use gif::{Frame, Repeat};
-use robmikh_common::universal::d3d::{create_direct3d_device, get_d3d_interface_from_object};
+use robmikh_common::universal::d3d::create_direct3d_device;
 use windows::{
     core::{Handle, Result},
-    Graphics::{
-        Capture::{Direct3D11CaptureFrame, GraphicsCaptureItem},
-        SizeInt32,
-    },
+    Graphics::{Capture::GraphicsCaptureItem, SizeInt32},
     Win32::{
         Foundation::PWSTR,
         Graphics::{
             Direct3D11::{
-                ID3D11Device, ID3D11DeviceContext, ID3D11Texture1D, ID3D11Texture2D,
-                D3D11_BIND_SHADER_RESOURCE, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE1D_DESC,
-                D3D11_USAGE_DEFAULT,
+                ID3D11Device, ID3D11DeviceContext, ID3D11Texture1D, D3D11_BIND_SHADER_RESOURCE,
+                D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE1D_DESC, D3D11_USAGE_DEFAULT,
             },
             Dxgi::Common::DXGI_FORMAT_R8G8B8A8_UINT,
         },
@@ -34,10 +30,14 @@ use windows::{
 
 use crate::{
     capture::frame_generator::{CaptureFrameGenerator, CaptureFrameGeneratorSession},
+    encoder::compositor::ComposedFrame,
     util::handle::AutoCloseHandle,
 };
 
-use super::{diff::TextureDiffer, lut::PaletteIndexLUT, quantizer::ColorQuantizer};
+use super::{
+    compositor::FrameCompositor, diff::TextureDiffer, lut::PaletteIndexLUT,
+    quantizer::ColorQuantizer,
+};
 
 pub struct CaptureGifEncoder {
     _d3d_device: ID3D11Device,
@@ -107,6 +107,9 @@ impl CaptureGifEncoder {
         // Create our differ
         let mut differ = TextureDiffer::new(&d3d_device, &d3d_context, capture_size)?;
 
+        // Create our compositor
+        let frame_compositor = FrameCompositor::new(&d3d_device, &d3d_context, capture_size)?;
+
         // Setup capture
         let mut frame_generator =
             CaptureFrameGenerator::new(device, capture_item, capture_size, 2)?;
@@ -139,13 +142,11 @@ impl CaptureGifEncoder {
                 encoder.set_repeat(Repeat::Infinite).unwrap();
 
                 let mut last_timestamp = None;
-                let mut process_frame = |frame: Direct3D11CaptureFrame| -> Result<()> {
+                let mut process_frame = |frame: ComposedFrame| -> Result<()> {
                     let (bytes, rect) = {
-                        let frame_texture: ID3D11Texture2D =
-                            get_d3d_interface_from_object(&frame.Surface()?)?;
-                        let bytes = quantizer.quantize(&frame_texture)?;
+                        let bytes = quantizer.quantize(frame.texture)?;
 
-                        let rect = differ.process_frame(&frame_texture)?;
+                        let rect = differ.process_frame(frame.texture)?;
                         //println!("{:?}", rect);
 
                         (bytes, rect)
@@ -194,14 +195,14 @@ impl CaptureGifEncoder {
                         gif_frame.left = rect.left as u16;
                         gif_frame.top = rect.top as u16;
                         let timestamp: Duration = if last_timestamp.is_none() {
-                            let timestamp = frame.SystemRelativeTime()?;
+                            let timestamp = frame.system_relative_time;
                             timestamp
                         } else {
                             last_timestamp.unwrap()
                         }
                         .into();
                         let current_timestamp: Duration = {
-                            let current_timestamp = frame.SystemRelativeTime()?;
+                            let current_timestamp = frame.system_relative_time;
                             last_timestamp = Some(current_timestamp);
                             current_timestamp
                         }
@@ -220,12 +221,14 @@ impl CaptureGifEncoder {
                 loop {
                     if should_exit.load(Ordering::SeqCst) == true {
                         while let Some(frame) = frame_generator.try_get_next_frame()? {
-                            process_frame(frame)?;
+                            let composed_frame = frame_compositor.process_frame(&frame)?;
+                            process_frame(composed_frame)?;
                         }
                         break;
                     }
                     if let Some(frame) = frame_generator.wait_for_next_frame()? {
-                        process_frame(frame)?;
+                        let composed_frame = frame_compositor.process_frame(&frame)?;
+                        process_frame(composed_frame)?;
                     } else {
                         break;
                     }
