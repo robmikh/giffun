@@ -1,6 +1,8 @@
 use std::process::Command;
 
 fn main() {
+    ensure_generated_dirs().unwrap();
+
     compile_shader("cs_5_0", "LUTGeneration");
     compile_shader("ps_5_0", "LUTLookup_PS");
     compile_shader("vs_5_0", "LUTLookup_VS");
@@ -34,4 +36,8 @@ fn compile_shader(profile: &str, file_stem: &str) {
         .status()
         .unwrap();
     assert!(status.success());
+}
+
+fn ensure_generated_dirs() -> std::io::Result<()> {
+    std::fs::create_dir_all("data/generated/shaders/")
 }
