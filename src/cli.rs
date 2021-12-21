@@ -44,7 +44,7 @@ pub fn parse_cli() -> Result<CliOptions> {
         CaptureType::Monitor(display_handle)
     };
 
-    let disable_frame_diff = if cfg!(feature = "debug"){
+    let disable_frame_diff = if cfg!(feature = "debug") {
         matches.is_present("nodiff")
     } else {
         false
@@ -90,22 +90,21 @@ fn build_cli_app() -> App<'static, 'static> {
                 .takes_value(false)
                 .conflicts_with_all(&["window", "display"]),
         );
-        if cfg!(feature = "debug")
-        {
-            app = app.arg(
-                Arg::with_name("nodiff")
-                    .long("nodiff")
-                    .help("Disable frame diffing. (DEBUG)")
-                    .takes_value(false)
-                    .required(false),
-            );
-        }
+    if cfg!(feature = "debug") {
         app = app.arg(
-            Arg::with_name("OUTPUT FILE")
-                .help("The output file that will contain the gif.")
-                .default_value("recording.gif")
+            Arg::with_name("nodiff")
+                .long("nodiff")
+                .help("Disable frame diffing. (DEBUG)")
+                .takes_value(false)
                 .required(false),
         );
+    }
+    app = app.arg(
+        Arg::with_name("OUTPUT FILE")
+            .help("The output file that will contain the gif.")
+            .default_value("recording.gif")
+            .required(false),
+    );
 
     app
 }
