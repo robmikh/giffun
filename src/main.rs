@@ -28,7 +28,7 @@ use crate::{
     util::{dwm::get_window_rect, hotkey::pump_messages},
 };
 
-fn run<P: AsRef<Path>>(capture_type: CaptureType, output_file_path: P) -> Result<()> {
+fn run<P: AsRef<Path>>(capture_type: CaptureType, output_file_path: P, disable_frame_diff: bool) -> Result<()> {
     unsafe {
         RoInitialize(RO_INIT_MULTITHREADED)?;
     }
@@ -71,6 +71,7 @@ fn run<P: AsRef<Path>>(capture_type: CaptureType, output_file_path: P) -> Result
         capture_item,
         capture_size,
         output_file_path,
+        disable_frame_diff,
     )?;
 
     // Record
@@ -98,6 +99,6 @@ fn run<P: AsRef<Path>>(capture_type: CaptureType, output_file_path: P) -> Result
 
 fn main() -> Result<()> {
     let cli_options = parse_cli()?;
-    run(cli_options.capture_type, &cli_options.output_file)?;
+    run(cli_options.capture_type, &cli_options.output_file, cli_options.disable_frame_diff)?;
     Ok(())
 }
