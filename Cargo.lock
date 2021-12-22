@@ -71,10 +71,15 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "gif",
+ "gifshaders",
  "robmikh-common",
  "windows",
  "zerocopy",
 ]
+
+[[package]]
+name = "gifshaders"
+version = "0.1.0"
 
 [[package]]
 name = "hermit-abi"

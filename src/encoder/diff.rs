@@ -130,7 +130,7 @@ impl TextureDiffer {
                 d3d_device.CreateUnorderedAccessView(&diff_buffer, &desc)?
             };
 
-            let diff_shader_bytes = include_bytes!["../../data/generated/shaders/TextureDiff.cso"];
+            let diff_shader_bytes = gifshaders::texture_diff_shader();
             let diff_shader = d3d_device.CreateComputeShader(
                 diff_shader_bytes as *const _ as *const _,
                 diff_shader_bytes.len(),

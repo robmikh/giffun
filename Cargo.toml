@@ -4,9 +4,9 @@ version = "0.1.0"
 authors = ["robmikh <rob.mikh@outlook.com>"]
 description = "An experimental gif encoder for Windows 10."
 edition = "2021"
-build = "build/build.rs"
 
 [dependencies]
+gifshaders = { path = "shaders" }
 gif = "0.11.3"
 zerocopy = "0.6.1"
 clap = "2.33.3"
