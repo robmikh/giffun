@@ -6,9 +6,7 @@ description = "An experimental gif encoder for Windows 10."
 edition = "2021"
 
 [dependencies]
-gifshaders = { path = "shaders" }
-gif = "0.11.3"
-zerocopy = "0.6.1"
+gifencoder = { path = "encoder" }
 clap = "2.33.3"
 
 [dependencies.windows]
@@ -16,35 +14,17 @@ version = "0.28.0"
 features = [
     "alloc",
     "Foundation",
-    "Foundation_Metadata",
-    "Foundation_Numerics",
-    "Graphics",
-    "Graphics_Capture",
-    "Graphics_DirectX",
-    "Graphics_DirectX_Direct3D11",
     "System",
     "Win32_Foundation",
-    "Win32_Graphics_Direct3D",
-    "Win32_Graphics_Direct3D11",
-    "Win32_Graphics_Dwm",
-    "Win32_Graphics_Dxgi",
-    "Win32_Graphics_Dxgi_Common",
-    "Win32_Security",
-    "Win32_System_Threading",
     "Win32_System_WinRT",
-    "Win32_System_WinRT_Graphics_Capture",
-    "Win32_System_WinRT_Direct3D11",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",
 ]
 
 [dependencies.robmikh-common]
 git = "https://github.com/robmikh/robmikh-common-rs"
-#path = "../robmikh-common-rs"
 features = [
-    "capture",
     "capture-desktop",
-    "d3d",
     "dispatcher-queue-desktop",
     "displays-desktop",
 ]
@@ -54,5 +34,5 @@ opt-level = 3
 
 [features]
 debug = [
-    "robmikh-common/d3d-debug",
+    "gifencoder/debug",
 ]

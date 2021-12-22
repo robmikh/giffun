@@ -1,11 +1,11 @@
 mod capture;
 mod cli;
-mod encoder;
 mod util;
 
 use std::path::Path;
 
 use cli::{parse_cli, CaptureType};
+use gifencoder::{CaptureGifEncoder, DEFAULT_PALETTE};
 use robmikh_common::{
     desktop::{
         capture::{create_capture_item_for_monitor, create_capture_item_for_window},
@@ -23,10 +23,7 @@ use windows::{
     },
 };
 
-use crate::{
-    encoder::{capture_gif_encoder::CaptureGifEncoder, palette::DEFAULT_PALETTE},
-    util::{dwm::get_window_rect, hotkey::pump_messages},
-};
+use crate::util::{dwm::get_window_rect, hotkey::pump_messages};
 
 fn run<P: AsRef<Path>>(
     capture_type: CaptureType,
