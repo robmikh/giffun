@@ -112,7 +112,7 @@ dependencies = [
 [[package]]
 name = "robmikh-common"
 version = "0.1.3"
-source = "git+https://github.com/robmikh/robmikh-common-rs#b2d0a14384f4b0032a4d3b3d2e747e18493c4c95"
+source = "git+https://github.com/robmikh/robmikh-common-rs?rev=b2d0a14384f4b0032a4d3b3d2e747e18493c4c95#b2d0a14384f4b0032a4d3b3d2e747e18493c4c95"
 dependencies = [
  "windows",
 ]
