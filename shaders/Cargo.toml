@@ -1,0 +1,4 @@
+[package]
+name = "gifshaders"
+build = "build.rs"
+version = "0.1.0"

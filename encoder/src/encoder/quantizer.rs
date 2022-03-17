@@ -145,15 +145,13 @@ impl ColorQuantizer {
         };
         unsafe {
             // Load LUT lookup shaders
-            let lut_lookup_pixel_shader_bytes =
-                include_bytes!["../../data/generated/shaders/LUTLookup_PS.cso"];
+            let lut_lookup_pixel_shader_bytes = gifshaders::lut_lookup_pixel_shader();
             let lut_lookup_pixel_shader = d3d_device.CreatePixelShader(
                 lut_lookup_pixel_shader_bytes as *const _ as *const _,
                 lut_lookup_pixel_shader_bytes.len(),
                 None,
             )?;
-            let lut_lookup_vertex_shader_bytes =
-                include_bytes!["../../data/generated/shaders/LUTLookup_VS.cso"];
+            let lut_lookup_vertex_shader_bytes = gifshaders::lut_lookup_vertex_shader();
             let lut_lookup_vertex_shader = d3d_device.CreateVertexShader(
                 lut_lookup_vertex_shader_bytes as *const _ as *const _,
                 lut_lookup_vertex_shader_bytes.len(),

@@ -60,6 +60,7 @@ impl CaptureGifEncoder {
         capture_item: GraphicsCaptureItem,
         capture_size: SizeInt32,
         path: P,
+        disable_frame_diff: bool,
     ) -> Result<Self> {
         let capture_size = ensure_even_size(capture_size);
 
@@ -144,7 +145,16 @@ impl CaptureGifEncoder {
 
                 let mut last_timestamp = None;
                 let mut process_frame = |frame: ComposedFrame, force: bool| -> Result<()> {
-                    let mut rect = differ.process_frame(frame.texture)?;
+                    let mut rect = if !disable_frame_diff {
+                        differ.process_frame(frame.texture)?
+                    } else {
+                        Some(DiffRect {
+                            left: 0,
+                            top: 0,
+                            right: capture_size.Width as u32,
+                            bottom: capture_size.Height as u32,
+                        })
+                    };
 
                     if force && rect.is_none() {
                         // Since there's no change, pick a small random part of the frame.
