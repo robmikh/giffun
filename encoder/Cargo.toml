@@ -8,7 +8,7 @@ gif = "0.11.3"
 zerocopy = "0.6.1"
 
 [dependencies.windows]
-version = "0.28.0"
+version = "0.37.0"
 features = [
     "alloc",
     "Foundation",
@@ -36,6 +36,7 @@ features = [
 
 [dependencies.robmikh-common]
 git = "https://github.com/robmikh/robmikh-common-rs"
+rev = "b5eb775457e1168be46831d7d67130419bb821e7"
 features = [
     "capture",
     "d3d",

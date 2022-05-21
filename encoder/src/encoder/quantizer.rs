@@ -1,25 +1,21 @@
 use windows::{
-    core::{Interface, Result},
+    core::{Interface, Result, PCSTR},
     Foundation::Numerics::{Vector2, Vector3},
     Graphics::{RectInt32, SizeInt32},
-    Win32::{
-        Foundation::PSTR,
-        Graphics::{
-            Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-            Direct3D11::{
-                ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
-                ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11Texture2D,
-                D3D11_BIND_INDEX_BUFFER, D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE,
-                D3D11_BIND_VERTEX_BUFFER, D3D11_BOX, D3D11_BUFFER_DESC, D3D11_COMPARISON_NEVER,
-                D3D11_CPU_ACCESS_READ, D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_INPUT_ELEMENT_DESC,
-                D3D11_INPUT_PER_VERTEX_DATA, D3D11_SAMPLER_DESC, D3D11_SUBRESOURCE_DATA,
-                D3D11_TEXTURE2D_DESC, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_USAGE_DEFAULT,
-                D3D11_USAGE_STAGING, D3D11_VIEWPORT,
-            },
-            Dxgi::Common::{
-                DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32_FLOAT,
-                DXGI_FORMAT_R32G32_FLOAT, DXGI_FORMAT_R8_UINT, DXGI_SAMPLE_DESC,
-            },
+    Win32::Graphics::{
+        Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+        Direct3D11::{
+            ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
+            ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11Texture2D, D3D11_BIND_INDEX_BUFFER,
+            D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_BIND_VERTEX_BUFFER,
+            D3D11_BOX, D3D11_BUFFER_DESC, D3D11_COMPARISON_NEVER, D3D11_CPU_ACCESS_READ,
+            D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA,
+            D3D11_SAMPLER_DESC, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
+            D3D11_TEXTURE_ADDRESS_WRAP, D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING, D3D11_VIEWPORT,
+        },
+        Dxgi::Common::{
+            DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32G32B32_FLOAT,
+            DXGI_FORMAT_R32G32_FLOAT, DXGI_FORMAT_R8_UINT, DXGI_SAMPLE_DESC,
         },
     },
 };
@@ -146,26 +142,20 @@ impl ColorQuantizer {
         unsafe {
             // Load LUT lookup shaders
             let lut_lookup_pixel_shader_bytes = gifshaders::lut_lookup_pixel_shader();
-            let lut_lookup_pixel_shader = d3d_device.CreatePixelShader(
-                lut_lookup_pixel_shader_bytes as *const _ as *const _,
-                lut_lookup_pixel_shader_bytes.len(),
-                None,
-            )?;
+            let lut_lookup_pixel_shader =
+                d3d_device.CreatePixelShader(lut_lookup_pixel_shader_bytes, None)?;
             let lut_lookup_vertex_shader_bytes = gifshaders::lut_lookup_vertex_shader();
-            let lut_lookup_vertex_shader = d3d_device.CreateVertexShader(
-                lut_lookup_vertex_shader_bytes as *const _ as *const _,
-                lut_lookup_vertex_shader_bytes.len(),
-                None,
-            )?;
-            d3d_context.VSSetShader(lut_lookup_vertex_shader, std::ptr::null(), 0);
-            d3d_context.PSSetShader(lut_lookup_pixel_shader, std::ptr::null(), 0);
+            let lut_lookup_vertex_shader =
+                d3d_device.CreateVertexShader(lut_lookup_vertex_shader_bytes, None)?;
+            d3d_context.VSSetShader(lut_lookup_vertex_shader, &[]);
+            d3d_context.PSSetShader(lut_lookup_pixel_shader, &[]);
 
             // Create our vertex input layout
             let mut position_name: Vec<u8> = b"POSITION\0".iter().map(|x| *x).collect();
             let mut texcoord_name: Vec<u8> = b"TEXCOORD\0".iter().map(|x| *x).collect();
             let input_layout_data = [
                 D3D11_INPUT_ELEMENT_DESC {
-                    SemanticName: PSTR(position_name.as_mut_ptr()),
+                    SemanticName: PCSTR(position_name.as_mut_ptr()),
                     SemanticIndex: 0,
                     Format: DXGI_FORMAT_R32G32B32_FLOAT,
                     InputSlot: 0,
@@ -174,7 +164,7 @@ impl ColorQuantizer {
                     InstanceDataStepRate: 0,
                 },
                 D3D11_INPUT_ELEMENT_DESC {
-                    SemanticName: PSTR(texcoord_name.as_mut_ptr()),
+                    SemanticName: PCSTR(texcoord_name.as_mut_ptr()),
                     SemanticIndex: 0,
                     Format: DXGI_FORMAT_R32G32_FLOAT,
                     InputSlot: 0,
@@ -183,12 +173,8 @@ impl ColorQuantizer {
                     InstanceDataStepRate: 0,
                 },
             ];
-            let input_layout = d3d_device.CreateInputLayout(
-                &input_layout_data as *const _ as *const _,
-                input_layout_data.len() as u32,
-                lut_lookup_vertex_shader_bytes as *const _ as *const _,
-                lut_lookup_vertex_shader_bytes.len(),
-            )?;
+            let input_layout =
+                d3d_device.CreateInputLayout(&input_layout_data, lut_lookup_vertex_shader_bytes)?;
             d3d_context.IASetInputLayout(input_layout);
             d3d_context.IASetVertexBuffers(
                 0,
@@ -199,32 +185,24 @@ impl ColorQuantizer {
             );
             d3d_context.IASetIndexBuffer(&index_buffer, DXGI_FORMAT_R16_UINT, 0);
             d3d_context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            d3d_context.RSSetViewports(
-                1,
-                &[D3D11_VIEWPORT {
-                    TopLeftX: 0.0,
-                    TopLeftY: 0.0,
-                    Width: capture_size.Width as f32,
-                    Height: capture_size.Height as f32,
-                    MinDepth: 0.0,
-                    MaxDepth: 1.0,
-                }] as *const _ as *const _,
-            );
+            d3d_context.RSSetViewports(&[D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: capture_size.Width as f32,
+                Height: capture_size.Height as f32,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]);
 
-            d3d_context.PSSetSamplers(0, 1, &[input_sampler.clone()] as *const _ as *const _);
+            d3d_context.PSSetSamplers(0, &[Some(input_sampler.clone())]);
             d3d_context.PSSetShaderResources(
                 0,
-                2,
                 &[
-                    input_shader_resource_view.clone(),
-                    lut.shader_resource_view(),
-                ] as *const _ as *const _,
+                    Some(input_shader_resource_view.clone()),
+                    Some(lut.shader_resource_view()),
+                ],
             );
-            d3d_context.OMSetRenderTargets(
-                1,
-                &[output_texture_render_target_view.clone()] as *const _ as *const _,
-                None,
-            )
+            d3d_context.OMSetRenderTargets(&[Some(output_texture_render_target_view.clone())], None)
         }
 
         // Create a staging texture that matches our output texture

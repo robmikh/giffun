@@ -10,7 +10,7 @@ gifencoder = { path = "encoder" }
 clap = "2.33.3"
 
 [dependencies.windows]
-version = "0.28.0"
+version = "0.37.0"
 features = [
     "alloc",
     "Foundation",
@@ -24,7 +24,7 @@ features = [
 [dependencies.robmikh-common]
 git = "https://github.com/robmikh/robmikh-common-rs"
 #path = "../robmikh-common-rs"
-rev = "b2d0a14384f4b0032a4d3b3d2e747e18493c4c95"
+rev = "b5eb775457e1168be46831d7d67130419bb821e7"
 features = [
     "d3d",
     "capture-desktop",

@@ -13,11 +13,10 @@ use std::{
 use gif::{Frame, Repeat};
 use robmikh_common::universal::d3d::create_direct3d_device;
 use windows::{
-    core::{Handle, Result},
+    core::Result,
     Foundation::TimeSpan,
     Graphics::{Capture::GraphicsCaptureItem, SizeInt32},
     Win32::{
-        Foundation::PWSTR,
         Graphics::{
             Direct3D11::{
                 ID3D11Device, ID3D11DeviceContext, ID3D11Texture1D, D3D11_BIND_SHADER_RESOURCE,
@@ -119,8 +118,7 @@ impl CaptureGifEncoder {
 
         // Setup encoder thread
         let start_event = unsafe {
-            let start_event =
-                CreateEventW(std::ptr::null(), true, false, PWSTR(std::ptr::null_mut())).ok()?;
+            let start_event = CreateEventW(std::ptr::null(), true, false, None)?;
             AutoCloseHandle(start_event)
         };
         let should_exit = Arc::new(AtomicBool::new(false));

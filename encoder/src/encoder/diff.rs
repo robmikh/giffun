@@ -131,13 +131,9 @@ impl TextureDiffer {
             };
 
             let diff_shader_bytes = gifshaders::texture_diff_shader();
-            let diff_shader = d3d_device.CreateComputeShader(
-                diff_shader_bytes as *const _ as *const _,
-                diff_shader_bytes.len(),
-                None,
-            )?;
+            let diff_shader = d3d_device.CreateComputeShader(diff_shader_bytes, None)?;
 
-            d3d_context.CSSetShader(diff_shader, std::ptr::null(), 0);
+            d3d_context.CSSetShader(diff_shader, &[]);
             d3d_context.CSSetUnorderedAccessViews(
                 0,
                 1,
@@ -183,9 +179,10 @@ impl TextureDiffer {
                     .CopyResource(&self.diff_buffer, &self.diff_default_buffer);
                 self.d3d_context.CSSetShaderResources(
                     0,
-                    2,
-                    &[current_texture_srv, self.previous_texture_srv.clone()] as *const _
-                        as *const _,
+                    &[
+                        Some(current_texture_srv),
+                        Some(self.previous_texture_srv.clone()),
+                    ],
                 );
                 self.d3d_context.Dispatch(
                     self.texture_size.Width as u32 / 2,

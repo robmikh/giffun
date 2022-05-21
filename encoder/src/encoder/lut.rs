@@ -42,18 +42,11 @@ impl PaletteIndexLUT {
             let lut_uav = { d3d_device.CreateUnorderedAccessView(&lut_texture, std::ptr::null())? };
 
             let lut_generation_shader_bytes = gifshaders::lut_generation_shader();
-            let lut_generation_shader = d3d_device.CreateComputeShader(
-                lut_generation_shader_bytes as *const _ as *const _,
-                lut_generation_shader_bytes.len(),
-                None,
-            )?;
+            let lut_generation_shader =
+                d3d_device.CreateComputeShader(lut_generation_shader_bytes, None)?;
 
-            d3d_context.CSSetShader(lut_generation_shader, std::ptr::null(), 0);
-            d3d_context.CSSetShaderResources(
-                0,
-                1,
-                &[palette_shader_resource_view] as *const _ as *const _,
-            );
+            d3d_context.CSSetShader(lut_generation_shader, &[]);
+            d3d_context.CSSetShaderResources(0, &[Some(palette_shader_resource_view)]);
             d3d_context.CSSetUnorderedAccessViews(
                 0,
                 1,
@@ -62,8 +55,8 @@ impl PaletteIndexLUT {
             );
             d3d_context.Dispatch(256 / 8, 256 / 8, 256 / 8);
 
-            d3d_context.CSSetShader(None, std::ptr::null(), 0);
-            d3d_context.CSSetConstantBuffers(0, 0, std::ptr::null());
+            d3d_context.CSSetShader(None, &[]);
+            d3d_context.CSSetConstantBuffers(0, &[]);
             let empty_uavs: [Option<ID3D11UnorderedAccessView>; 1] = [None];
             d3d_context.CSSetUnorderedAccessViews(
                 0,
